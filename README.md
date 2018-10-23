@@ -1,2 +1,5 @@
-# metricbeat-jolokia-camel-generator
-Generate files from camel JVM to metricbeat jolokia files
+# metricbeat-jolokia-generator
+Generate files to metricbeat jolokia files
+
+* camel routes
+* activemq topic and queues
