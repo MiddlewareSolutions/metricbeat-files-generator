@@ -2,10 +2,11 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>fr.timwi.agromousquetaires</groupId>
   <artifactId>metricbeat-files-generator</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.2-SNAPSHOT</version>
 
 
 <build>
+	
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -14,11 +15,19 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
-              <mainClass>fr.timwi.agromousquetaires.metricbeatfilesgenerator.Client</mainClass>
             </manifest>
           </archive>
         </configuration>
       </plugin>
     </plugins>
   </build>
+	<url>https://github.com/MiddlewareSolutions/metricbeat-jolokia-generator</url>
+	<name>metricbeat-jolokia-generator</name>
+	<scm>
+		<url>https://github.com/MiddlewareSolutions/metricbeat-jolokia-generator</url>
+	</scm>
+	<issueManagement>
+		<system>GitHib</system>
+		<url>https://github.com/MiddlewareSolutions/metricbeat-jolokia-generator/issues</url>
+	</issueManagement>
 </project>
