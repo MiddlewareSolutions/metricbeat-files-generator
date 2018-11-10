@@ -1,17 +1,13 @@
 package fr.middlewaresolutions.metricbeat.filesgenerator.talendesb;
 
-import java.io.IOException;
 import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.ResourceBundle;
 
-import javax.management.AttributeNotFoundException;
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanException;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
-import javax.management.ReflectionException;
 
 import fr.middlewaresolutions.metricbeat.filesgenerator.AbstractClient;
 
@@ -42,6 +38,7 @@ public class Client extends AbstractClient  {
 		String user = getVariable("jmx_user");
 		String passwd = getVariable("jmx_pwd");
 		String path = getVariable("target_path");
+		String group = getVariable("group");
 
 		/** Throw error if all parameters ar not specified */
 		if (url == null)
@@ -50,7 +47,7 @@ public class Client extends AbstractClient  {
 		// Initialize MBean Client
 		Client client = new Client();
 		// start processing
-		client.start(url, user, passwd, path);
+		client.start(url, user, passwd, path, group);
 		
 	}
 	
@@ -58,25 +55,78 @@ public class Client extends AbstractClient  {
 	 * start processing
 	 * 
 	 */
-	public void start(String url, String user, String pwd, String path) {
+	public void start(String url, String user, String pwd, String path, String group) {
 		 try {
 			 
 			 // connect JVM
     		connectToJVM(url, user, pwd);
     		
-    		// use prefix for files
-    		String prefix = rbTemplates.getString("prefix");
     		
-    		// For each route, generate a file
+    		
+    		// get jolokia host
+    		String jolokiaHost = getVariable("jolokia_host");
+    		if (jolokiaHost == null)
+    			throw new Exception("Env jolokia.host is mandatory.");
+    		
+    		HashMap<Integer, ArrayList<ObjectInstance>> map = new HashMap<Integer, ArrayList<ObjectInstance>>();
+    		
+    		Integer qte = Integer.MAX_VALUE;
+    		if (group != null)
+    			qte = Integer.valueOf(group);
+    		
+    		Integer cpt = 0;
+    		Integer index = 0;
+    		ArrayList<ObjectInstance> aGroup = new ArrayList<ObjectInstance>();
     		for(ObjectInstance oi: listMBeans(camelRoutePattern)) {
-    			
-    			ObjectName route = oi.getObjectName();
-    	        String fileName = msc.getAttribute(route, "RouteId").toString();
-    	            			
-    	        // for this route, generate file
-    			generateFile(path+prefix+fileName+".yml", mBean2File(oi));
+    			if (cpt++ < qte)
+    				aGroup.add(oi);
+    			else {
+    				cpt = 0;
+    				index++;
+    				map.put(index, aGroup);
+    				aGroup = new ArrayList<ObjectInstance>(); 
+    			}
     		}
-
+    		
+    		for(Integer groupNumber: map.keySet()) {
+    			ArrayList<ObjectInstance> groupe = map.get(groupNumber);
+    		
+	            String date = sdf.format(Calendar.getInstance().getTime());
+	            
+	    		// Utiliser le template jolokia
+	    		String header =  MessageFormat.format(
+	    							rbTemplates.getString("jolokia.header"),
+	    							jolokiaHost
+	    							);
+	    		
+	    		StringBuffer mbeans = new StringBuffer();
+	    		mbeans.append("# "+ date);
+	    		mbeans.append("\n");
+	    		mbeans.append(header);
+	    		
+	    		// For each route, generate a file
+	    		for(ObjectInstance oi: groupe) {
+	    			
+	    			ObjectName route = oi.getObjectName();
+	    			mbeans.append(mBean2JolokiaFile(oi));
+	    		}
+	    		
+	    		mbeans.append("\n");
+	    		
+	    		// For each route, generate a file
+	    		for(ObjectInstance oi: groupe) {
+	    			
+	    			ObjectName route = oi.getObjectName();
+	    			mbeans.append(mBean2HttpFile(oi));
+	    			mbeans.append("\n");
+	    		}
+	    		
+	    		
+	    	    String fileName = "talendesb-routes"+groupNumber;
+	    	            			
+	    	    // for this route, generate file
+	    		generateFile(path+fileName+".yml", mbeans);
+    		}
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -91,7 +141,31 @@ public class Client extends AbstractClient  {
 	 * @return
 	 * @throws Exception 
 	 */
-	private StringBuffer mBean2File(ObjectInstance oi) 
+	private StringBuffer mBean2JolokiaFile(ObjectInstance oi) 
+	throws Exception {
+		StringBuffer mbContent = new StringBuffer();
+		
+		ObjectName route = oi.getObjectName();
+		String name = route.getCanonicalName(); 
+                
+		// Utiliser le template jolokia
+		String jolokia =  MessageFormat.format(
+							rbTemplates.getString("jolokia.mbean"),
+							name
+							);
+		
+		mbContent.append(jolokia);
+		
+		return mbContent;
+	}
+	
+	/**
+	 * Generate content for one Object Instance
+	 * @param oi
+	 * @return
+	 * @throws Exception 
+	 */
+	private StringBuffer mBean2HttpFile(ObjectInstance oi) 
 	throws Exception {
 		StringBuffer mbContent = new StringBuffer();
 		
@@ -103,14 +177,7 @@ public class Client extends AbstractClient  {
 		if (jolokiaHost == null)
 			throw new Exception("Env jolokia.host is mandatory.");
 		
-        String date = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(Calendar.getInstance().getTime());
-        
-		// Utiliser le template jolokia
-		String jolokia =  MessageFormat.format(
-							rbTemplates.getString("jolokia"),
-							name,
-							jolokiaHost
-							);
+        String date = sdf.format(Calendar.getInstance().getTime());
 		
 		// Utiliser le template http
 		String http =  MessageFormat.format(
@@ -119,14 +186,8 @@ public class Client extends AbstractClient  {
 				jolokiaHost
 				);
 		
-		mbContent.append("# "+ date);
-		mbContent.append("\n");
-		mbContent.append(jolokia);
-		mbContent.append("\n");
 		mbContent.append(http);
 		
 		return mbContent;
 	}
-	
-	
 }

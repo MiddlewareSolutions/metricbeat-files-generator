@@ -1,9 +1,12 @@
 package fr.middlewaresolutions.metricbeat.filesgenerator;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -17,8 +20,6 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
-import fr.middlewaresolutions.metricbeat.filesgenerator.activemq.Client;
-
 /**
  * Abstract client for metricbeat 
  * @author emman
@@ -26,12 +27,17 @@ import fr.middlewaresolutions.metricbeat.filesgenerator.activemq.Client;
  */
 public class AbstractClient {
 
+	protected static JMXConnector jmxc;
+	
 	/** Use to find MBeans */
-	protected MBeanServerConnection msc;
+	static protected MBeanServerConnection msc;
 	
 	/** Logger */
 	protected Logger LOG = Logger.getLogger(this.getClass().getName());
 
+	protected SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+	protected SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
+	
 	public AbstractClient() {
 		super();
 	}
@@ -40,18 +46,17 @@ public class AbstractClient {
 	 * Generate a file with content
 	 * @param path
 	 * @param content
-	 * @throws UnsupportedEncodingException 
-	 * @throws FileNotFoundException 
+	 * @throws IOException 
 	 */
 	protected void generateFile(String path, StringBuffer content)
-	throws FileNotFoundException, UnsupportedEncodingException {
+	throws IOException {
 			
-		PrintWriter writer = new PrintWriter(path, "UTF-8");
-		writer.println(content.toString());
-		writer.close();
+		FileWriter fw = new FileWriter(path, true);
+	    BufferedWriter bw = new BufferedWriter(fw);
+	    bw.write(content.toString());
+	    bw.close();
 	
 		LOG.info(path+ " generated.");
-		// Owner of file should be root.
 	}
 
 	/**
@@ -66,11 +71,13 @@ public class AbstractClient {
 	
 	/**
 	 * Connect to JVM
+	 * @throws IOException 
 	 * 
 	 */
-	protected MBeanServerConnection connectToJVM(String url, String user, String pwd) {
+	protected MBeanServerConnection connectToJVM(String url, String user, String pwd) throws IOException {
 		
-		try {
+		if (jmxc == null) {
+
 			// environments vars for JMX
 			Map<String, String[]> env = new HashMap<String, String[]>();
 
@@ -80,15 +87,13 @@ public class AbstractClient {
 				env.put(JMXConnector.CREDENTIALS, credentials);
 			}
 
+			LOG.info("New connection to "+url);
 			JMXServiceURL jmxurl = new JMXServiceURL(url);
-			JMXConnector jmxc = JMXConnectorFactory.connect(jmxurl, env);
+			jmxc = JMXConnectorFactory.connect(jmxurl, env);
 
-			msc = jmxc.getMBeanServerConnection();
-
-		} catch (Exception e) {
-			LOG.severe(e.getMessage());
-			return null;
-		}
+		} 
+		
+		msc = jmxc.getMBeanServerConnection();
 		
 		return msc;
 	}
@@ -107,4 +112,24 @@ public class AbstractClient {
 		Set<ObjectInstance> mbeans = msc.queryMBeans(new ObjectName(pattern), null);
 		return mbeans;
 	}
+	
+	/**
+	 * This file exits ?
+	 * @param path
+	 * @return
+	 */
+	protected boolean fileExist(String path) {
+		File nFile = new File(path);
+		return nFile.exists();
+	}
+
+	@Override
+	protected void finalize() throws Throwable {
+		jmxc.close();
+		jmxc = null;
+		
+		super.finalize();
+	}
+	
+	
 }

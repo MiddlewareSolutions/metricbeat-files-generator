@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>fr.timwi.agromousquetaires</groupId>
   <artifactId>metricbeat-files-generator</artifactId>
-  <version>0.2-SNAPSHOT</version>
+  <version>0.3-SNAPSHOT</version>
 
 
 <build>
@@ -30,4 +30,11 @@
 		<system>GitHib</system>
 		<url>https://github.com/MiddlewareSolutions/metricbeat-jolokia-generator/issues</url>
 	</issueManagement>
+	<dependencies>
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+			<version>2.3.0</version>
+		</dependency>
+	</dependencies>
 </project>
