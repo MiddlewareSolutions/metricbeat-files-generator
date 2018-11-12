@@ -27,7 +27,7 @@ import javax.management.remote.JMXServiceURL;
  */
 public class AbstractClient {
 
-	protected static JMXConnector jmxc;
+	protected JMXConnector jmxc;
 	
 	/** Use to find MBeans */
 	static protected MBeanServerConnection msc;
