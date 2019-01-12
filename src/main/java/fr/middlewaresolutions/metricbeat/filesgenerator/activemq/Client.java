@@ -26,7 +26,7 @@ import fr.middlewaresolutions.metricbeat.filesgenerator.AbstractClient;
 public class Client extends AbstractClient {
 
 	/** Properties for talend ESB */
-	private static ResourceBundle rbTemplates = ResourceBundle.getBundle("activemq");
+	private static ResourceBundle rbTemplates = ResourceBundle.getBundle("activemq-metricbeat");
 	
 	/** Pattern to find routes */
 	private String queuesPattern = rbTemplates.getString("pattern");

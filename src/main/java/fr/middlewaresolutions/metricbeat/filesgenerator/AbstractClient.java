@@ -38,6 +38,10 @@ public class AbstractClient {
 	protected SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 	protected SimpleDateFormat sdfFile = new SimpleDateFormat("yyyyMMdd");
 	
+	/** CRON definitions */
+	protected static String cronPer2sec = "*/2 * * * * ? *";
+	protected static String cronPerMinute = "0 */1 * * * ? *";
+	
 	public AbstractClient() {
 		super();
 	}
@@ -123,10 +127,30 @@ public class AbstractClient {
 		return nFile.exists();
 	}
 
+	/**
+	 * Disconnect thread to JVM
+	 */
+	protected void disconnectToJVM() {
+		if (jmxc != null) {
+			try {
+				jmxc.close();
+			} catch (IOException e) {
+				LOG.warning("Impossible to disconnect. "+e.getMessage());
+			}
+			jmxc = null;
+		}
+	}
+	
 	@Override
 	protected void finalize() throws Throwable {
-		jmxc.close();
-		jmxc = null;
+		if (jmxc != null) {
+			try {
+				jmxc.close();
+			} catch (IOException e) {
+				LOG.warning("Impossible to disconnect. "+e.getMessage());
+			}
+			jmxc = null;
+		}
 		
 		super.finalize();
 	}

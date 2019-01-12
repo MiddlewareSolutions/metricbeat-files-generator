@@ -78,7 +78,7 @@ public class Client extends AbstractClient  {
 		  Trigger trigger =newTrigger()
 		      .withIdentity("triggerJolokia", "jolokia")
 		      .startNow()
-		      .withSchedule(CronScheduleBuilder.cronSchedule("*/15 * * * * ? *"))            
+		      .withSchedule(CronScheduleBuilder.cronSchedule(cronPerMinute))       
 		      .build();
 
 		  // Tell quartz to schedule the job using our trigger

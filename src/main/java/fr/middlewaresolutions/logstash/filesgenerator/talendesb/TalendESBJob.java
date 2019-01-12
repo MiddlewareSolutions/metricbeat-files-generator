@@ -8,6 +8,7 @@ import javax.management.AttributeList;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -15,6 +16,7 @@ import org.quartz.JobExecutionException;
 
 import fr.middlewaresolutions.metricbeat.filesgenerator.AbstractClient;
 
+@DisallowConcurrentExecution
 public class TalendESBJob extends AbstractClient implements Job {
 
 	/** Properties for talend ESB */
@@ -92,8 +94,12 @@ public class TalendESBJob extends AbstractClient implements Job {
     		
 
         } catch (Exception e) {
-            e.printStackTrace();
-        }
+            LOG.warning("Error during TalendESB collect. "+e.getMessage());
+        } finally {
+        	disconnectToJVM();
+		}
+		 
+		 
 	}
 	
 	

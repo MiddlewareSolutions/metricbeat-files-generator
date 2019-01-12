@@ -40,7 +40,7 @@ public class Client extends AbstractClient  {
 	/**
 	 * Call form command line.
 	 * 
-	 * Example: -Djmx.url=service:jmx:rmi://localhost:44444/jndi/rmi://localhost:1099/karaf-trun -Djmx.user=tadmin -Djmx.pwd=tadmin -Dtarget.path=/etc/metricbeat/modules/
+	 * Example: -Djmx.url=service:jmx:rmi:///jndi/rmi://localhost:11616/jmxrmi -Djmx.user=tadmin -Djmx.pwd=tadmin -Dtarget.path=/etc/metricbeat/modules/
 	 * @param args
 	 * @throws Exception 
 	 */
@@ -63,26 +63,46 @@ public class Client extends AbstractClient  {
 
 		/** Throw error if all parameters ar not specified */
 		if (url == null)
-			throw new Exception("jmx.url should be specified. ex: service:jmx:rmi://localhost:44444/jndi/rmi://localhost:1099/karaf-trun");
+			throw new Exception("jmx.url should be specified. ex: service:jmx:rmi:///jndi/rmi://localhost:11616/jmxrmi");
 		
-		// define the job and tie it to our HelloJob class
-		  JobDetail job = newJob(ActiveMQJob.class)
-				  .withIdentity("talendesb", "jolokia") // name "myJob", group "group1"
+		// define the activemq-routes
+		  JobDetail jobRoutes = newJob(ActiveMQJob.class)
+				  .withIdentity("activemq-routes", "jolokia") // name "myJob", group "group1"
 				  .usingJobData("url", url)
 				  .usingJobData("user", user)
 				  .usingJobData("passwd", passwd)
 				  .usingJobData("path", path)
+				  .usingJobData("bundle", "activemq-routes")
+				  .build();
+		  
+		// Trigger the job to run now, and then every 40 seconds
+		  Trigger triggerRoutes =newTrigger()
+		      .withIdentity("Routes", "jolokia")
+		      .startNow()
+		      .withSchedule(CronScheduleBuilder.cronSchedule(cronPerMinute))
+		      .build();
+		  
+		// define the activemq-clients
+		  JobDetail jobClients = newJob(ActiveMQJob.class)
+				  .withIdentity("activemq-clients", "jolokia") // name "myJob", group "group1"
+				  .usingJobData("url", url)
+				  .usingJobData("user", user)
+				  .usingJobData("passwd", passwd)
+				  .usingJobData("path", path)
+				  .usingJobData("bundle", "activemq-clients")
 				  .build();
 
-		  // Trigger the job to run now, and then every 40 seconds
-		  Trigger trigger =newTrigger()
-		      .withIdentity("triggerJolokia", "jolokia")
+		// Trigger the job to run now, and then every 40 seconds
+		  Trigger triggerClients =newTrigger()
+		      .withIdentity("Clients", "jolokia")
 		      .startNow()
-		      .withSchedule(CronScheduleBuilder.cronSchedule("*/15 * * * * ? *"))
+		      .withSchedule(CronScheduleBuilder.cronSchedule(cronPerMinute))
 		      .build();
+		  
 
 		  // Tell quartz to schedule the job using our trigger
-		  scheduler.scheduleJob(job, trigger);
+		  scheduler.scheduleJob(jobRoutes, triggerRoutes);
+		  scheduler.scheduleJob(jobClients, triggerClients);
 		
 	}
 	

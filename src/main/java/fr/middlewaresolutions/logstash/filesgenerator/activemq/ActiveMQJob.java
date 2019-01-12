@@ -8,6 +8,7 @@ import javax.management.AttributeList;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -15,13 +16,14 @@ import org.quartz.JobExecutionException;
 
 import fr.middlewaresolutions.metricbeat.filesgenerator.AbstractClient;
 
+@DisallowConcurrentExecution
 public class ActiveMQJob extends AbstractClient implements Job {
 
 	/** Properties for talend ESB */
-	private static ResourceBundle rbTemplates = ResourceBundle.getBundle("activemq");
+	private ResourceBundle rbTemplates = null;
 	
 	/** Pattern to find routes */
-	private String jmxPattern = rbTemplates.getString("pattern");
+	private String jmxPattern = null;
 	
 	public void execute(JobExecutionContext context) throws JobExecutionException {
 		
@@ -34,7 +36,8 @@ public class ActiveMQJob extends AbstractClient implements Job {
 			(String) dataMap.get("url"),
 			(String) dataMap.get("user"),
 			(String) dataMap.get("passwd"),
-			(String) dataMap.get("path")
+			(String) dataMap.get("path"),
+			(String) dataMap.get("bundle")
 		);
 		
 	}
@@ -43,8 +46,12 @@ public class ActiveMQJob extends AbstractClient implements Job {
 	 * start processing
 	 * 
 	 */
-	private void start(String url, String user, String pwd, String path) {
-		 try {
+	private void start(String url, String user, String pwd, String path, String bundle) {
+		try {
+			
+			rbTemplates = ResourceBundle.getBundle(bundle);
+			jmxPattern = rbTemplates.getString("pattern");
+		
 			// ref time
 	    	Calendar ref = Calendar.getInstance();
 	    	String date = sdf.format(ref.getTime());
@@ -56,7 +63,7 @@ public class ActiveMQJob extends AbstractClient implements Job {
 
     		// generate a file
 	    	String fileName = rbTemplates.getString("prefix")+sdfFile.format(ref.getTime());
-	    	fileName = path+fileName+".cvs";
+	    	fileName = path+fileName+".csv";
 	    	
 	    	// generate header if file not existing
     		if (!fileExist(fileName)) {
@@ -90,9 +97,11 @@ public class ActiveMQJob extends AbstractClient implements Job {
 	    	generateFile(fileName, mbContent);
     		
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		 } catch (Exception e) {
+            LOG.warning("Error during ActiveMQ collect. "+e.getMessage());
+        } finally {
+        	disconnectToJVM();
+		}
 	}
 	
 	
@@ -115,7 +124,9 @@ public class ActiveMQJob extends AbstractClient implements Job {
 				rbTemplates.getString("mbean.attributes").split("\n"));
 		
 		for(Attribute attribute: attrList.asList()) {	
-			mbContent.append(attribute.getValue());
+			if (attribute.getValue() != null)
+				mbContent.append(attribute.getValue());
+					
 			mbContent.append(";");
 		}
 		
